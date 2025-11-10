@@ -21,4 +21,4 @@ EXPOSE 8080
 COPY --from=build /app/publish .
 
 # Define como iniciar a API (troque 'MinhaApi.dll' se seu projeto tiver outro nome)
-ENTRYPOINT ["dotnet", "MinhaApi.dll"]
+ENTRYPOINT ["dotnet", "my-api.dll"]
