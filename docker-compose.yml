@@ -6,30 +6,28 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: meu-banco-sql-express
     environment:
-      ACCEPT_EULA: 'Y' # Obrigatório
-      MSSQL_PID: 'Express' # Define a edição como Express
+      ACCEPT_EULA: 'Y'
+      MSSQL_PID: 'Express'
       SA_PASSWORD: 'SuaSenhaForte_123' # Senha complexa obrigatória!
     ports:
-      - "1433:1433" # Opcional: expõe o banco para você acessar do seu PC
+      - "1433:1433"
     volumes:
-      - mssql_data:/var/opt/mssql # Para não perder os dados
+      - mssql_data:/var/opt/mssql
 
   # Serviço 2: Sua API .NET
   api:
-    container_name: minha-api-dotnet
+    container_name: my-api # <-- MUDANÇA 1 (Opcional, mas limpo)
     build:
       # 'context' é o caminho para a pasta onde está seu Dockerfile
-      context: ./MinhaApi  # <--- Verifique se é o nome da pasta do seu projeto
+      context: ./my-api  # <-- MUDANÇA 2 (Obrigatória)
       dockerfile: Dockerfile
     restart: always
     ports:
-      # Mapeia a porta 80 (pública) da VM para a 8080 (interna) da API
       - "80:8080"
     environment:
-      # A string de conexão que sua API vai usar
       ConnectionStrings__DefaultConnection: "Server=db_sql_express;Database=minha_api_db;User Id=sa;Password=SuaSenhaForte_123;TrustServerCertificate=True;"
     depends_on:
-      - db_sql_express # Garante que o banco suba antes da API
+      - db_sql_express
 
 volumes:
-  mssql_data: # Define o volume para persistir os dados do banco
+  mssql_data:
