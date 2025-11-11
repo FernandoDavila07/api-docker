@@ -1,25 +1,24 @@
 version: '3.8'
 
 services:
-  # Serviço 1: O Banco de Dados SQL Server Express
+  # Serviço 1: O Banco de Dados (sem mudanças)
   db_sql_express:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: meu-banco-sql-express
     environment:
       ACCEPT_EULA: 'Y'
       MSSQL_PID: 'Express'
-      SA_PASSWORD: 'SuaSenhaForte_123' # Senha complexa obrigatória!
+      SA_PASSWORD: 'SuaSenhaForte_123'
     ports:
       - "1433:1433"
     volumes:
       - mssql_data:/var/opt/mssql
 
-  # Serviço 2: Sua API .NET
+  # Serviço 2: Sua API .NET (com novas variáveis de ambiente)
   api:
-    container_name: my-api # <-- MUDANÇA 1 (Opcional, mas limpo)
+    container_name: my-api
     build:
-      # 'context' é o caminho para a pasta onde está seu Dockerfile
-      context: ./my-api  # <-- MUDANÇA 2 (Obrigatória)
+      context: ./my-api
       dockerfile: Dockerfile
     restart: always
     ports:
@@ -27,8 +26,39 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ConnectionStrings__DefaultConnection: "Server=db_sql_express;Database=minha_api_db;User Id=sa;Password=SuaSenhaForte_123;TrustServerCertificate=True;"
+
+      # --- CONFIGURAÇÃO DO DATADOG (APM) ---
+      DD_AGENT_HOST: "datadog_agent" # Diz à API para enviar traces para o contêiner 'datadog_agent'
+      DD_LOGS_INJECTION: "true"      # Conecta logs e traces
+      DD_SERVICE: "my-api-service"   # O nome do seu serviço no Datadog
+      DD_ENV: "development"          # O ambiente (ex: dev, prod)
+      DD_VERSION: "1.0.0"            # A versão da sua API
+      # -----------------------------------
+
     depends_on:
       - db_sql_express
+      - datadog_agent # Garante que o agente suba antes da API
+
+  # --- NOVO SERVIÇO! ---
+  # Serviço 3: O Agente Datadog
+  datadog_agent:
+    image: gcr.io/datadoghq/agent:latest
+    container_name: datadog-agent
+    environment:
+      DD_API_KEY: "ab68db71a16af5c85a1bb890373e5bb5" # <-- COLOQUE SUA CHAVE AQUI
+      DD_SITE: "datadoghq.com"       # (ou datadoghq.eu se sua conta for na Europa)
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true" # Pega logs de TODOS os contêineres
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true" # Ouve traces vindos de outros contêineres
+    ports:
+      - "8126:8126/udp" # Porta para receber traces (APM)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Permite ao agente ver outros contêineres
+      - /proc/:/host/proc/:ro                        # Permite ao agente ver métricas da VM
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup/:ro      # Permite ao agente ver métricas da VM
+    restart: always
+# ------------------------
 
 volumes:
   mssql_data:
