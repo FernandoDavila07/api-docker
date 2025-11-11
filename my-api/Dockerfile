@@ -6,7 +6,7 @@ RUN dotnet restore
 COPY . .
 RUN dotnet publish -c Release -o /app/publish
 
-# Estágio 2: Runtime (com as mudanças do Datadog)
+# Estágio 2: Runtime (com a CORREÇÃO)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
@@ -18,8 +18,8 @@ USER root
 RUN apt-get update && apt-get install -y curl && \
     rm -rf /var/lib/apt/lists/*
 
-# 3. Baixa e descompacta o profiler do Datadog
-RUN curl -L https://github.com/DataDog/datadog-dotnet-apm/releases/download/v2.61.0/datadog-dotnet-apm-2.61.0-linux-x64.tar.gz -o datadog-dotnet-apm.tar.gz && \
+# 3. Baixa e descompacta o profiler do Datadog (DA URL CORRETA)
+RUN curl -L https://dl.ddtrace.com/datadog-dotnet-apm/stable/datadog-dotnet-apm-2.61.0-linux-x64.tar.gz -o datadog-dotnet-apm.tar.gz && \
     tar -xzf datadog-dotnet-apm.tar.gz -C /opt && \
     rm datadog-dotnet-apm.tar.gz
     
