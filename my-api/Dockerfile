@@ -1,24 +1,38 @@
-# Estágio 1: Build (Compilação)
-# Usa a imagem do SDK do .NET 8.0 para compilar
+# Estágio 1: Build (sem mudanças)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-
-# Copia o .csproj e restaura os pacotes (NuGet)
 COPY *.csproj .
 RUN dotnet restore
-
-# Copia o resto do código e compila o projeto
 COPY . .
 RUN dotnet publish -c Release -o /app/publish
 
-# Estágio 2: Runtime (Execução)
-# Usa a imagem de runtime (menor) para rodar a API
+# Estágio 2: Runtime (com as mudanças do Datadog)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
+
+# --- INSTALAÇÃO DO DATADOG TRACER ---
+# 1. Troca para usuário root para poder instalar pacotes
+USER root
+
+# 2. Instala 'curl' (para baixar)
+RUN apt-get update && apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# 3. Baixa e descompacta o profiler do Datadog
+RUN curl -L https://github.com/DataDog/datadog-dotnet-apm/releases/download/v2.61.0/datadog-dotnet-apm-2.61.0-linux-x64.tar.gz -o datadog-dotnet-apm.tar.gz && \
+    tar -xzf datadog-dotnet-apm.tar.gz -C /opt && \
+    rm datadog-dotnet-apm.tar.gz
+    
+# 4. Define as variáveis de ambiente para LIGAR o profiler
+ENV CORECLR_ENABLE_PROFILING="1"
+ENV CORECLR_PROFILER="{846F5F1C-F9AE-4B07-969E-05C26BC060D8}"
+ENV CORECLR_PROFILER_PATH="/opt/Datadog.Trace.ClrProfiler.Native.so"
+ENV DD_DOTNET_TRACER_HOME="/opt"
+
+# 5. Volta para o usuário padrão do container (mais seguro)
+USER $APP_UID
+# ------------------------------------
+
 EXPOSE 8080
-
-# Copia os arquivos compilados do estágio de build
 COPY --from=build /app/publish .
-
-# Define como iniciar a API (troque 'MinhaApi.dll' se seu projeto tiver outro nome)
 ENTRYPOINT ["dotnet", "my-api.dll"]
