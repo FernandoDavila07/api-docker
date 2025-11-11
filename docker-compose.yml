@@ -25,6 +25,7 @@ services:
     ports:
       - "80:8080"
     environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
       ConnectionStrings__DefaultConnection: "Server=db_sql_express;Database=minha_api_db;User Id=sa;Password=SuaSenhaForte_123;TrustServerCertificate=True;"
     depends_on:
       - db_sql_express
